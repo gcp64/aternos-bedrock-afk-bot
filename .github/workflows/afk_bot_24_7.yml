@@ -1,0 +1,31 @@
+name: 24/7 Bedrock AFK Guardian
+
+on:
+  schedule:
+    # Runs every 5 hours to ensure 24/7 continuous uptime
+    - cron: '0 */5 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-guardian:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Bedrock AFK Bot Guardian
+        run: |
+          echo "Starting AFK Bot on GitHub Cloud..."
+          # Run bot with a 5-hour timeout per job to smoothly hand over to the next schedule
+          timeout 310m node bot.js || true
