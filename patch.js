@@ -8,9 +8,10 @@ const optionsPath = path.join(__dirname, 'node_modules', 'bedrock-protocol', 'sr
 if (fs.existsSync(optionsPath)) {
     let content = fs.readFileSync(optionsPath, 'utf8');
     if (!content.includes("Versions['1.26.45']")) {
+        content = content.replace("const CURRENT_VERSION = '1.26.40'", "const CURRENT_VERSION = '1.26.45'");
         content = content.replace(
-            "const CURRENT_VERSION = '1.26.40'",
-            "const CURRENT_VERSION = '1.26.45'\n\nconst Versions = Object.fromEntries(mcData.versions.bedrock.filter(e => e.releaseType === 'release').map(e => [e.minecraftVersion, e.version]))\nVersions['1.26.45'] = 2169"
+            "const Versions = Object.fromEntries(mcData.versions.bedrock.filter(e => e.releaseType === 'release').map(e => [e.minecraftVersion, e.version]))",
+            "const Versions = Object.fromEntries(mcData.versions.bedrock.filter(e => e.releaseType === 'release').map(e => [e.minecraftVersion, e.version]))\nVersions['1.26.45'] = 2169"
         );
         fs.writeFileSync(optionsPath, content, 'utf8');
         console.log('  [OK] Patched options.js');

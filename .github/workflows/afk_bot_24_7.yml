@@ -27,4 +27,4 @@ jobs:
         run: |
           echo "Starting AFK Bot on GitHub Cloud..."
           # Run bot with a 5-hour timeout per job to smoothly hand over to the next schedule
-          timeout 310m node bot.js || true
+          timeout 310m node bot.js
