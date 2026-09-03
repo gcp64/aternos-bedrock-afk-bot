@@ -51,9 +51,13 @@ server.listen(HTTP_PORT, () => {
     console.log(`[HTTP] Cloud Health Server listening on port ${HTTP_PORT}`);
 });
 
+let activeClient = null;
+let guardianInterval = null;
+
 // Helper to execute commands as OP in Bedrock 1.26.x
 function sendBotCommand(client, cmd) {
     try {
+        if (!client) return;
         const uuid = randomUUID();
         client.queue('command_request', {
             command: cmd.startsWith('/') ? cmd : '/' + cmd,
@@ -73,17 +77,36 @@ function sendBotCommand(client, cmd) {
 }
 
 function secureBotInSky(client) {
-    console.log('[GUARDIAN] Securing bot: Creative Mode, Y=300 (Sky), Invisibility...');
+    console.log('[GUARDIAN] Securing bot in sky: Creative, Invisibility, Resistance, Spawnpoint...');
     sendBotCommand(client, '/gamemode creative @s');
     sendBotCommand(client, '/tp @s 0 300 0');
+    sendBotCommand(client, '/spawnpoint @s 0 300 0');
+    sendBotCommand(client, '/effect @s resistance 999999 255 true');
     sendBotCommand(client, '/effect @s invisibility 999999 255 true');
     // Ensure no ghost/duplicate bot lingers
+    sendBotCommand(client, '/kick "AFK_Guardian(1)" Duplicate');
     sendBotCommand(client, '/kick "AFK_Guardian(2)" Duplicate');
+}
+
+function cleanup() {
+    if (guardianInterval) {
+        clearInterval(guardianInterval);
+        guardianInterval = null;
+    }
+    if (activeClient) {
+        try {
+            activeClient.removeAllListeners();
+            activeClient.close();
+        } catch (e) {}
+        activeClient = null;
+    }
+    isConnected = false;
 }
 
 // 2. Minecraft Bedrock Bot Connection Loop
 function startBot() {
-    console.log(`[${new Date().toLocaleTimeString()}] Attempting to connect to ${HOST}:${PORT}...`);
+    cleanup();
+    console.log(`[${new Date().toLocaleTimeString()}] Connecting to ${HOST}:${PORT} as ${USERNAME}...`);
     lastStatus = 'Connecting...';
 
     let client;
@@ -94,16 +117,15 @@ function startBot() {
             username: USERNAME,
             offline: true,
             skipPing: false,
-            connectTimeout: 20000
+            connectTimeout: 25000
         });
+        activeClient = client;
     } catch (err) {
         console.error(`[ERROR] Failed to initialize client: ${err.message}`);
         lastStatus = `Error: ${err.message}`;
         reconnect();
         return;
     }
-
-    let guardianInterval = null;
 
     client.on('join', () => {
         isConnected = true;
@@ -126,6 +148,13 @@ function startBot() {
         }, 30000);
     });
 
+    client.on('respawn', () => {
+        console.log(`>>> [RESPAWN] ${USERNAME} respawn detected! Re-securing in sky... <<<`);
+        setTimeout(() => {
+            secureBotInSky(client);
+        }, 1000);
+    });
+
     client.on('text', (packet) => {
         if (packet.message) {
             console.log(`[CHAT] ${packet.source_name || 'Server'}: ${packet.message}`);
@@ -133,37 +162,25 @@ function startBot() {
     });
 
     client.on('kick', (reason) => {
-        isConnected = false;
-        if (guardianInterval) {
-            clearInterval(guardianInterval);
-            guardianInterval = null;
-        }
+        cleanup();
         lastStatus = `Kicked: ${JSON.stringify(reason)}`;
         console.warn(`[KICKED] Bot was kicked from server. Reason: ${JSON.stringify(reason)}`);
         reconnect();
     });
 
     client.on('close', () => {
-        if (guardianInterval) {
-            clearInterval(guardianInterval);
-            guardianInterval = null;
-        }
         if (isConnected) {
-            isConnected = false;
-            lastStatus = 'Connection closed';
             console.warn(`[DISCONNECT] Connection lost.`);
         }
+        cleanup();
+        lastStatus = 'Connection closed';
         reconnect();
     });
 
     client.on('error', (err) => {
-        if (guardianInterval) {
-            clearInterval(guardianInterval);
-            guardianInterval = null;
-        }
-        isConnected = false;
-        lastStatus = `Network Error: ${err.message}`;
         console.error(`[NETWORK ERROR] ${err.message}`);
+        cleanup();
+        lastStatus = `Network Error: ${err.message}`;
         reconnect();
     });
 }
