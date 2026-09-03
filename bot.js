@@ -1,5 +1,6 @@
 const http = require('http');
 const bedrock = require('bedrock-protocol');
+const { randomUUID } = require('crypto');
 
 const HOST = 'FGDFFE2.aternos.me';
 const PORT = 27807;
@@ -50,6 +51,36 @@ server.listen(HTTP_PORT, () => {
     console.log(`[HTTP] Cloud Health Server listening on port ${HTTP_PORT}`);
 });
 
+// Helper to execute commands as OP in Bedrock 1.26.x
+function sendBotCommand(client, cmd) {
+    try {
+        const uuid = randomUUID();
+        client.queue('command_request', {
+            command: cmd.startsWith('/') ? cmd : '/' + cmd,
+            origin: {
+                type: 'player',
+                uuid: uuid,
+                request_id: '',
+                player_entity_id: 0n
+            },
+            internal: false,
+            version: 'latest'
+        });
+        console.log(`[GUARDIAN CMD] ${cmd}`);
+    } catch (e) {
+        console.error(`[GUARDIAN CMD ERROR] ${cmd}:`, e.message);
+    }
+}
+
+function secureBotInSky(client) {
+    console.log('[GUARDIAN] Securing bot: Creative Mode, Y=300 (Sky), Invisibility...');
+    sendBotCommand(client, '/gamemode creative @s');
+    sendBotCommand(client, '/tp @s 0 300 0');
+    sendBotCommand(client, '/effect @s invisibility 999999 255 true');
+    // Ensure no ghost/duplicate bot lingers
+    sendBotCommand(client, '/kick "AFK_Guardian(2)" Duplicate');
+}
+
 // 2. Minecraft Bedrock Bot Connection Loop
 function startBot() {
     console.log(`[${new Date().toLocaleTimeString()}] Attempting to connect to ${HOST}:${PORT}...`);
@@ -72,11 +103,27 @@ function startBot() {
         return;
     }
 
+    let guardianInterval = null;
+
     client.on('join', () => {
         isConnected = true;
         lastStatus = 'Joined and Guarding Server';
         console.log(`\n>>> [ONLINE] ${USERNAME} has joined the server! <<<`);
         console.log(`>>> Server is now guarded and will STAY ONLINE 24/7! <<<\n`);
+    });
+
+    client.on('spawn', () => {
+        console.log(`>>> [SPAWN] ${USERNAME} spawned in world! Applying sky protection... <<<`);
+        setTimeout(() => {
+            secureBotInSky(client);
+        }, 1500);
+
+        if (guardianInterval) clearInterval(guardianInterval);
+        guardianInterval = setInterval(() => {
+            if (isConnected) {
+                secureBotInSky(client);
+            }
+        }, 30000);
     });
 
     client.on('text', (packet) => {
@@ -87,12 +134,20 @@ function startBot() {
 
     client.on('kick', (reason) => {
         isConnected = false;
+        if (guardianInterval) {
+            clearInterval(guardianInterval);
+            guardianInterval = null;
+        }
         lastStatus = `Kicked: ${JSON.stringify(reason)}`;
         console.warn(`[KICKED] Bot was kicked from server. Reason: ${JSON.stringify(reason)}`);
         reconnect();
     });
 
     client.on('close', () => {
+        if (guardianInterval) {
+            clearInterval(guardianInterval);
+            guardianInterval = null;
+        }
         if (isConnected) {
             isConnected = false;
             lastStatus = 'Connection closed';
@@ -102,6 +157,10 @@ function startBot() {
     });
 
     client.on('error', (err) => {
+        if (guardianInterval) {
+            clearInterval(guardianInterval);
+            guardianInterval = null;
+        }
         isConnected = false;
         lastStatus = `Network Error: ${err.message}`;
         console.error(`[NETWORK ERROR] ${err.message}`);

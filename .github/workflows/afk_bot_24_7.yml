@@ -5,6 +5,10 @@ on:
     - cron: '0 */4 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: aternos-afk-bot-guardian
+  cancel-in-progress: true
+
 permissions:
   actions: write
   contents: read
@@ -34,11 +38,12 @@ jobs:
           node bot.js &
           BOT_PID=$!
           
-          # Stay online guarding the server for 4 hours and 45 minutes
-          sleep 17100
+          # Stay online guarding the server for 3 hours and 55 minutes
+          sleep 14100
           
-          echo "Guarding cycle complete. Triggering the next continuous cycle..."
-          gh workflow run afk_bot_24_7.yml || true
-          
-          sleep 60
+          echo "Guarding cycle complete. Stopping current bot gracefully before next cycle..."
           kill $BOT_PID || true
+          sleep 5
+          
+          echo "Triggering next continuous cycle..."
+          gh workflow run afk_bot_24_7.yml || true
