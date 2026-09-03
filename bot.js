@@ -77,12 +77,18 @@ function sendBotCommand(client, cmd) {
 }
 
 function secureBotInSky(client) {
-    console.log('[GUARDIAN] Securing bot in sky: Creative, Invisibility, Resistance, Spawnpoint...');
+    console.log('[GUARDIAN] Securing bot in dedicated Sky Platform: Creative, Y=250, Spawnpoint, Invisibility...');
     sendBotCommand(client, '/gamemode creative @s');
-    sendBotCommand(client, '/tp @s 0 300 0');
-    sendBotCommand(client, '/spawnpoint @s 0 300 0');
+    // Build floating Sky Guardian platform
+    sendBotCommand(client, '/fill -231 248 35 -225 248 41 sea_lantern');
+    sendBotCommand(client, '/fill -231 249 35 -225 249 41 glass');
+    sendBotCommand(client, '/fill -230 249 36 -226 249 40 air');
+    sendBotCommand(client, '/tp @s -228 250 38');
+    sendBotCommand(client, '/spawnpoint @s -228 250 38');
     sendBotCommand(client, '/effect @s resistance 999999 255 true');
     sendBotCommand(client, '/effect @s invisibility 999999 255 true');
+    // Load Royal Resource Vault at castle entrance for players
+    sendBotCommand(client, '/structure load royal_vault -225 72 34');
     // Ensure no ghost/duplicate bot lingers
     sendBotCommand(client, '/kick "AFK_Guardian(1)" Duplicate');
     sendBotCommand(client, '/kick "AFK_Guardian(2)" Duplicate');
