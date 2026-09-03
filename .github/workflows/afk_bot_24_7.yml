@@ -2,9 +2,12 @@ name: 24/7 Bedrock AFK Guardian
 
 on:
   schedule:
-    # Runs every 5 hours to ensure 24/7 continuous uptime
-    - cron: '0 */5 * * *'
+    - cron: '0 */4 * * *'
   workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
 
 jobs:
   run-guardian:
@@ -23,8 +26,19 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Run Bedrock AFK Bot Guardian
+      - name: Run Bedrock AFK Bot Guardian & Auto-Loop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Starting AFK Bot on GitHub Cloud..."
-          # Run bot with a 5-hour timeout per job to smoothly hand over to the next schedule
-          timeout 310m node bot.js
+          node bot.js &
+          BOT_PID=$!
+          
+          # Stay online guarding the server for 4 hours and 45 minutes
+          sleep 17100
+          
+          echo "Guarding cycle complete. Triggering the next continuous cycle..."
+          gh workflow run afk_bot_24_7.yml || true
+          
+          sleep 60
+          kill $BOT_PID || true
