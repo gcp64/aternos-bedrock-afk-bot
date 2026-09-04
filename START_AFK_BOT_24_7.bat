@@ -4,8 +4,8 @@ color 0b
 echo ========================================================
 echo        STARTING BEDROCK AFK BOT GUARDIAN (24/7)         
 echo ========================================================
-echo Connecting to FGDFFE2.aternos.me:27807...
-echo Keep this window open in background to keep server ONLINE!
+echo Target: FGDFFE2.aternos.me:27807
+echo Bot: AFK_Guardian (Operator, Creative, Y=300 Sky Protected)
 echo ========================================================
 cd /d "%~dp0"
 node bot.js

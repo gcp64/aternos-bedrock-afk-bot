@@ -8,6 +8,7 @@
     "start": "node bot.js"
   },
   "dependencies": {
+    "arabic-persian-reshaper": "^1.0.1",
     "bedrock-protocol": "^3.39.0"
   },
   "engines": {
